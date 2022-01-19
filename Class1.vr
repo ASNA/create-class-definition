@@ -1,0 +1,83 @@
+﻿Using System
+Using System.Collections
+Using System.Text
+Using System.Data 
+Using System.Windows.Forms
+
+Using ASNA.DataGate.Client
+Using ASNA.DataGate.Common
+Using ASNA.DataGate.Providers
+Using CommandLineUtility
+
+
+BegClass Program
+
+	BegSr Main Shared(*Yes) Access(*Public) Attributes(System.STAThread())
+		DclSrParm args Type(*String) Rank(1)
+
+        DclFld t Type(Test) New()
+
+        DclFld CmdLine Type(CommandLineArgs) New()
+        DclFld cam Type(CmdArgManager) 
+        DclFld errorMessage Type(*String) 
+        
+        cam = *New CommandLineUtility.CmdArgManager(CmdLine, args, "Generate DataGate file class")      
+        If cam.ParseArgs() <> CmdArgManager.ExitCode.Success
+            CustomConsole.WriteLineError(cam.ErrorMessage)
+            LeaveSr 
+        EndIf 
+
+        Try 
+            t.Run(CmdLine.DatabaseName, CmdLine.LibraryName, CmdLine.FileName, CmdLine.ClassName)
+            Console.WriteLine('Class definition for {0}-{1}/{2} is on the clipboard', CmdLine.DatabaseName, CmdLine.LibraryName, CmdLine.FileName ) 
+        Catch ex Type(System.Exception) 
+            errorMessage = ex.Message.ToLower() = 'object not found' ? 'Library or file not found' : ex.Message
+            Console.WriteLine("ERROR: " + errorMessage)
+        EndTry 
+
+	EndSr
+
+EndClass
+
+
+BegClass Test
+
+    DclFld DGDB     Type(AdgConnection) 
+    DclFld DGFile   Type(FileAdapter)     
+    DclFld DGDS     Type(AdgDataSet) 
+
+    BegSr Run Access(*Public) 
+        DclSrParm DBName Type(*String)
+        DclSrParm Library Type(*String)
+        DclSrParm File Type(*String)
+        DclSrParm ClassName Type(*String) 
+
+        DclFld ClassDef Type(*String) 
+
+        If ClassName.Contains(' ') 
+            Throw *New ArgumentException('--classname cannot contain blanks') 
+        EndIf
+
+        DGDB = *New AdgConnection(DBName) 
+        DGFile = *New FileAdapter(DGDB, String.Format('{0}/{1}', Library, File))
+        DGFile.AccessMode = AccessMode.Read
+        DGFile.OpenAttributes.BlockingFactor = FileOpenAttr.OptimalBlockingFactor
+        DGFile.OpenNewAdgDataSet(*ByRef DGDS)
+
+        DclFld dt Type(DataTable) 
+        dt = DGDS.Tables[0]
+
+        ClassDef = ClassDefinitionCreator.CreateToClipboard(ClassName, DGDS.Tables[0])
+        Clipboard.SetText(ClassDef)
+
+        DGFile.Close()
+        DGDB.Close()
+    EndSr
+EndClass
+
+BegClass CommandLineArgs Access(*Public) 
+    DclProp DatabaseName Type(*String) Access(*Public) Attributes(CmdArg("--databasename", "-d", *True,  "Database Name"))
+    DclProp LibraryName  Type(*String) Access(*Public) Attributes(CmdArg("--libraryname", "-l", *True,  "Library Name"))
+    DclProp FileName     Type(*String) Access(*Public) Attributes(CmdArg("--filename", "-f", *True,  "File Name"))
+    DclProp ClassName    Type(*String) Access(*Public) Attributes(CmdArg("--classname", "-c", *True,  "Class Name"))
+EndClass 

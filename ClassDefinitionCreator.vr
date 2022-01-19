@@ -1,0 +1,74 @@
+﻿Using System
+Using System.Data
+Using System.Text
+
+BegClass ClassDefinitionCreator 
+    BegFunc CreateToClipboard Type(*String)  Access(*Public) Shared(*Yes)
+        DclSrParm ClassName Type(*String) 
+        DclSrParm dt Type(DataTable) 
+
+        DclFld i Type(*Integer4) 
+        DclFld ColumnName Type(*String) 
+        DclFld ColumnType Type(*String) 
+
+        DclFld sb Type(StringBuilder) New()
+        DclFld DclMask Type(*String) 
+ 
+        sb.AppendLine(String.Format('BegClass {0} Access(*Public)', ClassName))
+        sb.AppendLine("")
+        sb.AppendLine("    // This class was created with the CreateClassDefinition utility.")
+        sb.AppendLine("    // Do not change it by hand--regenerate it with the CreateClassDefinition utility.")
+        sb.AppendLine("    // Property names must be lowercase to correspond to AddGetInstanceFromDataRowMethod's") 
+        sb.AppendLine("    // lowercase property name look up.")
+        sb.AppendLine("")
+
+        DclMask = '    DclProp {0} Type({1}) Access(*Public)'
+
+        For Index(i = 0) To(dt.Columns.Count - 1)
+            ColumnName = dt.Columns[i].ColumnName
+            ColumnType = dt.Columns[i].DataType.ToString()
+
+            sb.AppendLine(String.Format(DclMask, ColumnName.ToLower(), ColumnType)) 
+        EndFor
+
+        AddGetInstanceFromDataRowMethod(sb, ClassName)
+        sb.AppendLine('EndClass') 
+        
+        LeaveSr sb.ToString()
+    EndFunc 
+
+    BegSr AddGetInstanceFromDataRowMethod Access(*Public) Shared(*Yes) 
+        DclSrParm sb Type(StringBuilder)
+        DclSrParm ClassName Type(*String) 
+
+        sb.AppendLine('')
+        sb.AppendLine('    BegFunc GetInstanceFromDataRow Type(Customer) Access(*Public) Shared(*Yes)')
+        sb.AppendLine('        DclSrParm dt Type(DataTable)') 
+        sb.AppendLine('')
+        sb.AppendLine('        DclFld ColumnName Type(*String)') 
+        sb.AppendLine('        DclFld obj Type(' + ClassName + ') New()') 
+        sb.AppendLine('        DclFld dr Type(DataRow)')
+        sb.AppendLine('        DclFld i Type(*Integer4)') 
+        sb.AppendLine('        DclFld pi Type(PropertyInfo)') 
+        sb.AppendLine('        DclFld Value Type(*Object)') 
+        sb.AppendLine('')
+        sb.AppendLine('        DclFld dc Type(DataColumn)') 
+        sb.AppendLine('')
+        sb.AppendLine('        dr = dt.Rows[0]')
+        sb.AppendLine('')
+        sb.AppendLine('        For Index(i = 0) To(dt.Columns.Count - 1)')
+        sb.AppendLine('            dc = dt.Columns[i]')
+        sb.AppendLine('            ColumnName = dt.Columns[i].ColumnName')
+        sb.AppendLine('            Value = dr.ItemArray[i]')
+        sb.AppendLine('')
+        sb.AppendLine('            pi = obj.GetType().GetProperty(ColumnName.ToLower())')
+        sb.AppendLine('            If pi <> *Nothing')
+        sb.AppendLine('                pi.SetValue(obj, Convert.ChangeType(Value, pi.PropertyType), *Nothing)')
+        sb.AppendLine('            EndIf') 
+        sb.AppendLine('        EndFor') 
+        sb.AppendLine('')
+        sb.AppendLine('        LeaveSr obj')
+        sb.AppendLine('    EndFunc')
+        sb.AppendLine('')
+    EndSr
+EndClass
